@@ -51,7 +51,7 @@ binding rules and a reusable, tested starter.
 | 6 | Add unit tests for `healthcheck.py` | done |
 | 7 | Test every new file (gate exits 0, 11 checks) | done |
 | 8 | Update `README.md` and add `LICENSE` | done |
-| 9 | Commit and push phase 2 (needs approval) | pending |
+| 9 | Commit and push phase 2 | done (`733bbaa`) |
 
 ## Decisions
 
@@ -76,6 +76,8 @@ binding rules and a reusable, tested starter.
 - `scripts/backup.sh` on a git repo → archive + verified bundle, retention
   keeps last N, restore drill reproduces the file.
 - README layout matches `git ls-files`.
+- Fresh clone of `main` runs `check-repo.sh` → 11 passed, 0 failed,
+  and scaffolds a working project (verified after the push).
 
 ## Out of scope (deliberately)
 
