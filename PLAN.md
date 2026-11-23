@@ -31,3 +31,55 @@ on-device AI development environment and gives it a runnable health check.
 - `python3 healthcheck.py` exits 0 and prints a PASS/WARN/FAIL table.
 - `python3 healthcheck.py --json` produces valid JSON.
 - `git status` shows only the four intended files.
+
+---
+
+# Phase 2 — permanent AI development workspace
+
+Goal: turn the repo into the durable home for on-device agent work, with
+binding rules and a reusable, tested starter.
+
+## Scope
+
+| # | Step | Status |
+|---|------|--------|
+| 1 | Write comprehensive `AGENTS.md` (11 required areas) | done |
+| 2 | Add reusable `templates/project/` starter | done |
+| 3 | Add `scripts/new-project.sh` scaffolder | done |
+| 4 | Add `scripts/backup.sh` with verification + retention | done |
+| 5 | Add `scripts/check-repo.sh` seven-step gate | done |
+| 6 | Add unit tests for `healthcheck.py` | done |
+| 7 | Test every new file (gate exits 0, 11 checks) | done |
+| 8 | Update `README.md` and add `LICENSE` | done |
+| 9 | Commit and push phase 2 (needs approval) | pending |
+
+## Decisions
+
+- **Rules live in one file.** `AGENTS.md` is binding; template projects get a
+  short `AGENTS.md` that repeats the non-negotiables and links back, so rules
+  cannot silently diverge.
+- **No CI workflow.** The token lacks the `workflow` scope, so CI is
+  `scripts/check-repo.sh`. Revisit only if the user re-authorizes.
+- **Backups are verified, not assumed.** `tar -tzf` and `git bundle verify`
+  run before success is reported; retention prunes oldest first, never the
+  newest.
+- **Template smoke test is part of the gate.** A starter that only *looks*
+  right rots; the gate scaffolds, tests, runs and deletes one on every check.
+- **No overwrites.** Phase 1 files were edited additively; the original
+  health check and its README section are intact.
+
+## Verification
+
+- `scripts/check-repo.sh` → `11 passed, 0 failed`, exit 0.
+- `scripts/new-project.sh sample-app /tmp/...` → 5 tests pass, clean
+  `git status`, refuses to overwrite on re-run.
+- `scripts/backup.sh` on a git repo → archive + verified bundle, retention
+  keeps last N, restore drill reproduces the file.
+- README layout matches `git ls-files`.
+
+## Out of scope (deliberately)
+
+- `.github/workflows/` CI — blocked by token scope.
+- Publishing the template as a package — needs a release approval.
+- Rewriting phase 1 history — published, so it stays.
+

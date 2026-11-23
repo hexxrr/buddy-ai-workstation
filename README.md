@@ -2,9 +2,18 @@
 
 A pocket-sized AI development workstation: this repo documents the
 **OnePlus 12** environment I use to build and run code directly on the phone,
-and ships a single-file health check that proves the toolchain is intact.
+defines the rules an autonomous agent follows here, and ships a reusable
+project template plus a health check that prove the toolchain is intact.
 
 No laptop. No cloud IDE. Just a phone, a Linux userland, and an AI agent.
+
+- **Environment:** Alpine 3.24 on ARM64, Python 3.14, Node 24, on-device
+  Android builds without Gradle.
+- **Rules:** [`AGENTS.md`](AGENTS.md) — planning, testing, error recovery,
+  free-software-only, secrets, backups, approval gates.
+- **Template:** `scripts/new-project.sh my-tool` → tested project in seconds.
+- **Gate:** `scripts/check-repo.sh` → syntax, unit, smoke, backup and secret
+  checks in one command.
 
 ---
 
@@ -58,6 +67,81 @@ The workflow is conversational rather than IDE-driven:
 That last point is the safety model: full local autonomy, human consent at the
 boundary where the work leaves the device.
 
+## Workspace rules
+
+[`AGENTS.md`](AGENTS.md) is the binding contract for this repository. It covers:
+
+| Area | What it enforces |
+|---|---|
+| Planning | `PLAN.md` with executable definition of done, scope caps |
+| Python / Node.js | stdlib-first, pinned deps, `unittest` / `node --test` |
+| Android (ARM64) | plain Java + `aapt2`/`d8`/`apksigner`, no Gradle, user-installed |
+| Alpine / musl | no glibc binaries, `apk` over tarballs, busybox-safe scripts |
+| GitHub | branch/commit discipline; `workflow` and `delete_repo` scopes absent |
+| Testing & debugging | layered gates, reproduce-first, regression test per fix |
+| Error recovery | failure classes, retry budget, no blind re-sends |
+| Licensing | free and open source only, no paid APIs or key-gated tools |
+| Secrets | redaction, `.env` ignored, pre-commit token scan, rotate on leak |
+| Backups | verified `tar.gz` + git bundle before destructive work |
+| Approval | push, publish, delete, pay — explicit consent every time |
+
+Project-level `AGENTS.md` files may add rules but never weaken those.
+
+## Scaffolding a project
+
+`scripts/new-project.sh` copies `templates/project/`, fills in the name and
+date, initialises git on `main`, commits, and runs the new project's tests.
+
+```bash
+scripts/new-project.sh my-tool            # -> ../my-tool
+scripts/new-project.sh my-tool ~/code     # -> ~/code/my-tool
+cd ../my-tool && ./run-tests.sh
+```
+
+The template ships a Python package (`src/<package>/`), `unittest` smoke
+tests, `PLAN.md`, a project `AGENTS.md`, and a `.gitignore` for Python and
+Node.js. It refuses to overwrite an existing directory, and it never creates
+a remote — publishing stays a separate, approved step.
+
+## Testing the workspace
+
+```bash
+scripts/check-repo.sh          # full gate
+scripts/check-repo.sh --keep   # keep smoke-test artifacts in build/
+```
+
+It runs seven steps: shell syntax, Python compilation, unit tests,
+`healthcheck.py` (text + JSON), a backup round-trip, a template scaffold that
+is tested and discarded, and a credential-pattern scan over tracked and
+untracked files. Green output on this device:
+
+```
+PASS  all shell scripts parse
+PASS  all Python files compile
+PASS  unit tests
+PASS  healthcheck.py exits 0
+PASS  healthcheck.py --json is valid and ok
+PASS  backup archive created and lists data
+PASS  scaffold has no leftover placeholders
+PASS  scaffolded project tests pass
+PASS  scaffolded CLI runs
+PASS  scaffold has an initial commit
+PASS  no credential-shaped strings in working tree
+----------------------------------------------
+11 passed, 0 failed
+```
+
+## Backups before destructive work
+
+```bash
+scripts/backup.sh .                      # current project
+scripts/backup.sh ~/work/other --keep 5  # custom retention
+```
+
+Each run writes a verified `tar.gz` (caches, venvs and `.git` excluded) and,
+for git repositories, a verified `git bundle`, into `~/.buddy/backups`. Old
+snapshots beyond the retention limit are pruned; the newest is never touched.
+
 ## The health check
 
 `healthcheck.py` reports on Python, Node.js, git, GitHub CLI, disk, memory
@@ -100,10 +184,26 @@ user storage — don't read it as free space in Android.
 
 ```
 buddy-ai-workstation/
-├── PLAN.md          # scope, decisions, verification
-├── README.md        # this file
-├── healthcheck.py   # dependency-free environment probe
-└── .gitignore       # Python + Node.js
+├── AGENTS.md            # binding agent rules (planning, safety, backups)
+├── PLAN.md              # workspace plan and phase history
+├── README.md            # this file
+├── LICENSE              # MIT
+├── healthcheck.py       # dependency-free environment probe
+├── .gitignore           # Python + Node.js
+├── scripts/
+│   ├── new-project.sh   # scaffold from templates/project
+│   ├── check-repo.sh    # seven-step test gate
+│   └── backup.sh        # verified snapshot before destructive work
+├── templates/project/   # reusable starter: package, tests, docs, plan
+│   ├── AGENTS.md
+│   ├── PLAN.md
+│   ├── README.md
+│   ├── .gitignore
+│   ├── run-tests.sh
+│   ├── src/{{PACKAGE}}/
+│   └── tests/test_smoke.py
+└── tests/
+    └── test_healthcheck.py
 ```
 
 ## Running it on your own phone
